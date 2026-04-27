@@ -1,0 +1,17 @@
+{
+  "random_state": 42,
+  "dataset_path": "data/social_cyber_engineering_dataset.csv",
+  "target": "manipulation_type",
+  "dropped_columns": [
+    "conversation_id",
+    "original_conversation_id",
+    "source_dataset"
+  ],
+  "test_sizes": [
+    0.1,
+    0.2,
+    0.3,
+    0.4
+  ],
+  "notes": "Missing values handled in-pipeline via imputers; raw dataset unchanged."
+}
