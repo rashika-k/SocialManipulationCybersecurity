@@ -256,9 +256,9 @@ def calculate_risk_score(row):
 
 def get_risk_lvl(score):
 
-    if score >= 0.65:
+    if score >= 0.50:
         return "High"
-    elif score >= 0.35:
+    elif score >= 0.25:
         return "Medium"
     else:
         return "Low"
