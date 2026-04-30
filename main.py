@@ -49,6 +49,7 @@ def clean_mes_txt(value):
 
 
 def load_dataset():
+    """Load deduplicated dataset for classification."""
 
     df = pd.read_csv(Data_Set)
 
@@ -69,7 +70,7 @@ def load_dataset():
     print("==============================")
     print("Dataset loaded successfully.")
     print("Dataset:", Data_Set)
-    print("Rows after cleaning:", len(df))
+    print("Rows after cleaning (deduplicated):", len(df))
     print("Duplicate messages removed:", before_count - after_count)
     print("Total columns:", len(df.columns))
     print("\nAttack count:")
@@ -79,6 +80,7 @@ def load_dataset():
     print("==============================")
 
     return df
+
 
 
 def add_data_risk_scr(df):
@@ -256,9 +258,9 @@ def calculate_risk_score(row):
 
 def get_risk_lvl(score):
 
-    if score >= 0.50:
+    if score >= 0.65:
         return "High"
-    elif score >= 0.25:
+    elif score >= 0.35:
         return "Medium"
     else:
         return "Low"
@@ -283,7 +285,34 @@ def show_sample_alert(df):
     print(sample["clean_text"])
 
 
-def analyze_cus_msg_risk(risk_models, risk_vec):
+
+def train_manipulation_classifiers(df):
+    """Train Naive Bayes, Decision Tree, and Random Forest to predict manipulation_type."""
+
+    X = df["clean_text"]
+    y = df["manipulation_type"]
+
+    models = {
+        "Naive Bayes": MultinomialNB(),
+        "Decision Tree": DecisionTreeClassifier(random_state=Ran_Seed, max_depth=6),
+        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=Ran_Seed, max_depth=8)
+    }
+
+    trained = {}
+    vect = TfidfVectorizer(stop_words="english", max_features=5000)
+    X_vec = vect.fit_transform(X)
+
+    for name, mdl in models.items():
+        mdl.fit(X_vec, y)
+        trained[name] = mdl
+
+    print("==============================")
+    print("Manipulation type classifiers trained on full dataset.")
+    print("==============================")
+
+    return trained, vect
+
+def analyze_cus_msg_risk(risk_models, risk_vec, manip_models, manip_vec):
 
     print("==============================")
     print("Custom Risk Detection")
@@ -321,6 +350,19 @@ def analyze_cus_msg_risk(risk_models, risk_vec):
         print(f"Ensemble Average")
         print(f"  Risk Score: {round(avg_score, 4)}")
         print(f"  Risk Level: {get_risk_lvl(avg_score)}")
+        print("------------------------------")
+
+        manip_vec_msg = manip_vec.transform([clean_msg])
+        print("Predicted Manipulation Type")
+        manip_predictions = []
+        for model_name, mdl in manip_models.items():
+            pred = mdl.predict(manip_vec_msg)[0]
+            manip_predictions.append(pred)
+            print(f"  {model_name}: {pred}")
+
+        from collections import Counter
+        majority = Counter(manip_predictions).most_common(1)[0][0]
+        print(f"  Majority Vote:  {majority}")
         print("==============================")
 
 
@@ -335,7 +377,8 @@ def main():
     show_sample_alert(df)
 
     risk_mdl, risk_vect = train_txt_risk_mdl(df)
-    analyze_cus_msg_risk(risk_mdl, risk_vect)
+    manip_mdl, manip_vect = train_manipulation_classifiers(df)
+    analyze_cus_msg_risk(risk_mdl, risk_vect, manip_mdl, manip_vect)
 
 
 if __name__ == "__main__":
