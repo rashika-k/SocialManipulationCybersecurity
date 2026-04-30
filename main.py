@@ -10,6 +10,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import Ridge
+from xgboost import XGBRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
@@ -225,7 +226,13 @@ def train_txt_risk_mdl(df):
             random_state=Ran_Seed,
             max_depth=8
         ),
-        "Ridge (text baseline)": Ridge(alpha=1.0)
+        "XGBoost": XGBRegressor(
+            n_estimators=100,
+            random_state=Ran_Seed,
+            max_depth=8,
+            learning_rate=0.1,
+            verbosity=0
+        )
     }
 
     trained = {}
@@ -281,35 +288,40 @@ def analyze_cus_msg_risk(risk_models, risk_vec):
     print("==============================")
     print("Custom Risk Detection")
     print("==============================")
+    print("Type 'exit' at any time to quit.")
 
-    choose = input("Would you like to enter a custom message to determine risk? (Y/N): ")
+    while True:
+        print()
+        user_msg = input("Enter a message to analyze (or 'exit' to quit): ").strip()
 
-    if choose.lower() != "y":
-        print("Skipping custom message check.")
-        return
+        if user_msg.lower() == "exit":
+            print("Exiting risk detection.")
+            break
 
-    user_msg = input("Enter the message: ")
+        if not user_msg:
+            print("No message entered. Please try again.")
+            continue
 
-    clean_msg = clean_mes_txt(user_msg)
-    msg_vec = risk_vec.transform([clean_msg])
+        clean_msg = clean_mes_txt(user_msg)
+        msg_vec = risk_vec.transform([clean_msg])
 
-    print("==============================")
-    scores = []
-    for model_name, mdl in risk_models.items():
-        risk_scr = float(mdl.predict(msg_vec)[0])
-        risk_scr = max(0.0, min(1.0, risk_scr))
-        risk_lvl = get_risk_lvl(risk_scr)
-        scores.append(risk_scr)
-        print(f"{model_name}")
-        print(f"  Risk Score: {round(risk_scr, 4)}")
-        print(f"  Risk Level: {risk_lvl}")
-        print("------------------------------")
+        print("==============================")
+        scores = []
+        for model_name, mdl in risk_models.items():
+            risk_scr = float(mdl.predict(msg_vec)[0])
+            risk_scr = max(0.0, min(1.0, risk_scr))
+            risk_lvl = get_risk_lvl(risk_scr)
+            scores.append(risk_scr)
+            print(f"{model_name}")
+            print(f"  Risk Score: {round(risk_scr, 4)}")
+            print(f"  Risk Level: {risk_lvl}")
+            print("------------------------------")
 
-    avg_score = max(0.0, min(1.0, sum(scores) / len(scores)))
-    print(f"Ensemble Average")
-    print(f"  Risk Score: {round(avg_score, 4)}")
-    print(f"  Risk Level: {get_risk_lvl(avg_score)}")
-    print("==============================")
+        avg_score = max(0.0, min(1.0, sum(scores) / len(scores)))
+        print(f"Ensemble Average")
+        print(f"  Risk Score: {round(avg_score, 4)}")
+        print(f"  Risk Level: {get_risk_lvl(avg_score)}")
+        print("==============================")
 
 
 def main():
